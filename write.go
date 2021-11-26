@@ -1,0 +1,123 @@
+package httplog
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"sync"
+)
+
+var _ io.Writer = (*Writer)(nil)
+
+type Writer func([]byte) (int, error)
+
+func (w Writer) Write(buf []byte) (int, error) {
+	return w(buf)
+}
+
+var cfg = new(conf)
+var Client = new(http.Client)
+
+type conf struct {
+	url         string
+	open        bool
+	ignoreError bool
+}
+
+func SetOpen(b bool) {
+	cfg.open = b
+}
+
+func SetIgnoreError(b bool) {
+	cfg.ignoreError = b
+}
+
+func WriteJson(tag, url string) Writer {
+	cfg.url = url
+	return hWriteJson(tag)
+}
+
+func WriteString(tag, url string) Writer {
+	cfg.url = url
+	return hWriteString(tag)
+}
+
+func hWriteJson(tag string) Writer {
+	sbu := strings.Builder{}
+	sbu.WriteString(`{"type":"json","tag":"`)
+	sbu.WriteString(tag)
+	sbu.WriteString(`","data":`)
+	tag = sbu.String()
+	return func(b []byte) (int, error) {
+		i := len(b)
+		if !cfg.open {
+			return i, nil
+		}
+		bf := pool.Get().(*bytes.Buffer)
+		bf.WriteString(tag)
+
+		bf.Write(bytes.TrimFunc(b, func(r rune) bool {
+			if r == '\t' || r == '\n' {
+				return true
+			}
+			return false
+		}))
+
+		bf.WriteString(`}`)
+		return i, push(cfg, bf)
+	}
+}
+
+func hWriteString(tag string) Writer {
+	// 其他 可以直接
+	/*
+		bf:=bytes.Buffer{}
+		resp := zerolog.New(w)
+		//resp.Info().RawJSON("data", data).Msg("ok")
+		resp.Info().Bytes("data", data).Msg("ok")
+	*/
+	sbu := strings.Builder{}
+	sbu.WriteString(`{"type":"string","tag":"`)
+	sbu.WriteString(tag)
+	sbu.WriteString(`","data":"`)
+	tag = sbu.String()
+	return func(b []byte) (int, error) {
+		i := len(b)
+		if !cfg.open {
+			return i, nil
+		}
+		bf := pool.Get().(*bytes.Buffer)
+		bf.WriteString(tag)
+		bf.Write(bytes.TrimFunc(b, func(r rune) bool {
+			if r == '\t' || r == '\n' {
+				return true
+			}
+			return false
+		}))
+		bf.WriteString(`"}`)
+		return i, push(cfg, bf)
+	}
+}
+
+var pool sync.Pool
+
+func init() {
+	pool.New = func() interface{} {
+		return &bytes.Buffer{}
+	}
+}
+
+func push(cfg *conf, bf *bytes.Buffer) (err error) {
+	if bf == nil {
+		return nil
+	}
+	fmt.Println(bf.String())
+	if cfg.ignoreError {
+		_, _ = Client.Post(cfg.url, "application/json", bf)
+		return
+	}
+	_, err = Client.Post(cfg.url, "application/json", bf)
+	return
+}
