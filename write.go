@@ -44,19 +44,19 @@ func WriteString(tag, url string) Writer {
 	return hWriteString(tag)
 }
 
-func hWriteJson(tag string) Writer {
+func hWriteJson(sender string) Writer {
 	sbu := strings.Builder{}
-	sbu.WriteString(`{"type":"json","tag":"`)
-	sbu.WriteString(tag)
+	sbu.WriteString(`{"type":"json","sender":"`)
+	sbu.WriteString(sender)
 	sbu.WriteString(`","data":`)
-	tag = sbu.String()
+	sender = sbu.String()
 	return func(b []byte) (int, error) {
 		i := len(b)
 		if !cfg.open {
 			return i, nil
 		}
 		bf := pool.Get().(*bytes.Buffer)
-		bf.WriteString(tag)
+		bf.WriteString(sender)
 
 		bf.Write(bytes.TrimFunc(b, func(r rune) bool {
 			if r == '\t' || r == '\n' {
@@ -70,7 +70,7 @@ func hWriteJson(tag string) Writer {
 	}
 }
 
-func hWriteString(tag string) Writer {
+func hWriteString(sender string) Writer {
 	// 其他 可以直接
 	/*
 		bf:=bytes.Buffer{}
@@ -79,17 +79,17 @@ func hWriteString(tag string) Writer {
 		resp.Info().Bytes("data", data).Msg("ok")
 	*/
 	sbu := strings.Builder{}
-	sbu.WriteString(`{"type":"string","tag":"`)
-	sbu.WriteString(tag)
+	sbu.WriteString(`{"type":"string","sender":"`)
+	sbu.WriteString(sender)
 	sbu.WriteString(`","data":"`)
-	tag = sbu.String()
+	sender = sbu.String()
 	return func(b []byte) (int, error) {
 		i := len(b)
 		if !cfg.open {
 			return i, nil
 		}
 		bf := pool.Get().(*bytes.Buffer)
-		bf.WriteString(tag)
+		bf.WriteString(sender)
 		bf.Write(bytes.TrimFunc(b, func(r rune) bool {
 			if r == '\t' || r == '\n' {
 				return true
