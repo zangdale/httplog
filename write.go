@@ -34,14 +34,14 @@ func SetIgnoreError(b bool) {
 	cfg.ignoreError = b
 }
 
-func WriteJson(tag, url string) Writer {
+func WriteJson(sender, url string) Writer {
 	cfg.url = url
-	return hWriteJson(tag)
+	return hWriteJson(sender)
 }
 
-func WriteString(tag, url string) Writer {
+func WriteString(sender, url string) Writer {
 	cfg.url = url
-	return hWriteString(tag)
+	return hWriteString(sender)
 }
 
 func hWriteJson(sender string) Writer {

@@ -202,12 +202,13 @@ const processEvent = (data) => {
     if (!highEntropyStrings.checked) row.style.display = "none";
   }
 
-  if (activeSignatures.length > 0 && !activeSignatures.includes(sigId))
+  if (activeSignatures.length > 0 && !activeSignatures.includes(sigId)){
     row.style.display = "none";
+  }
   if (notifications.checked)
     notifyFinding(
-      data.Signature,
-      data.Matches ? data.Matches.join(", ") : data.File
+        sender,
+        jsonData.data
     );
 };
 
